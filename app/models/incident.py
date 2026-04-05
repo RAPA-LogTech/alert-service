@@ -10,8 +10,11 @@ class IncidentSummary(BaseModel):
     status: str | None = None
     service_info: str | None = None
     created_at: str | None = None
+    last_notified_at: str | None = None
     resolved_at: str | None = None
+    slack_url: str | None = None
     slack_ts: str | None = None
+    slack_channel: str | None = None
     s3_key: str | None = None
 
 

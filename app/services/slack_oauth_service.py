@@ -1,5 +1,6 @@
 from datetime import datetime
 import logging
+from urllib.parse import urlparse
 
 import requests
 
@@ -15,6 +16,53 @@ logger = logging.getLogger(__name__)
 
 class SlackOAuthService:
     """Slack OAuth 처리 서비스"""
+
+    def _fetch_team_metadata(self, bot_token: str | None, team_id: str | None = None) -> dict:
+        """team.info로 team_domain/team_image를 보강한다."""
+        if not bot_token:
+            return {}
+
+        team_domain = None
+
+        # team:read 스코프 없이도 auth.test의 url로 도메인 추출 가능
+        try:
+            auth_test = requests.post(
+                "https://slack.com/api/auth.test",
+                headers={"Authorization": f"Bearer {bot_token}"},
+                timeout=10,
+            )
+            auth_test.raise_for_status()
+            auth_payload = auth_test.json()
+            if auth_payload.get("ok") and auth_payload.get("url"):
+                host = urlparse(auth_payload["url"]).hostname or ""
+                if host.endswith(".slack.com"):
+                    team_domain = host.removesuffix(".slack.com")
+        except Exception as exc:
+            logger.warning("auth.test request failed: %s", exc)
+
+        params = {"team": team_id} if team_id else None
+        try:
+            response = requests.get(
+                "https://slack.com/api/team.info",
+                params=params,
+                headers={"Authorization": f"Bearer {bot_token}"},
+                timeout=10,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if not payload.get("ok"):
+                logger.warning("team.info failed: %s", payload.get("error"))
+                return {"team_domain": team_domain}
+
+            team = payload.get("team") or {}
+            icon = team.get("icon") or {}
+            return {
+                "team_domain": team.get("domain") or team_domain,
+                "team_image": team.get("image_230") or icon.get("image_132") or icon.get("image_102"),
+            }
+        except Exception as exc:
+            logger.warning("team.info request failed: %s", exc)
+            return {"team_domain": team_domain}
     
     def get_authorization_url(self, redirect_uri: str) -> str:
         """Slack 인증 URL 생성"""
@@ -103,11 +151,28 @@ class SlackOAuthService:
     def save_installation(self, oauth_data: dict) -> bool:
         """Slack 설치 정보 저장"""
         current_installation = get_slack_installation_config() or {}
+        team_info = oauth_data.get("team", {}) or {}
+        bot_token = oauth_data.get("access_token") or current_installation.get("bot_token")
+        team_id = team_info.get("id") or current_installation.get("team_id")
+
+        # oauth.v2.access 응답에 domain/icon이 누락되는 경우가 있어 team.info로 보강한다.
+        team_meta = self._fetch_team_metadata(bot_token, team_id)
+        team_domain = team_info.get("domain") or team_meta.get("team_domain") or current_installation.get("team_domain")
+        team_image = (
+            team_info.get("image_230")
+            or team_info.get("icon", {}).get("image_132")
+            or team_info.get("icon", {}).get("image_102")
+            or team_meta.get("team_image")
+            or current_installation.get("team_image")
+        )
+
         installation = {
             **current_installation,
-            "team_id": oauth_data.get("team", {}).get("id"),
-            "team_name": oauth_data.get("team", {}).get("name"),
-            "bot_token": oauth_data.get("access_token"),
+            "team_id": team_id,
+            "team_name": team_info.get("name") or current_installation.get("team_name"),
+            "team_domain": team_domain,
+            "team_image": team_image,
+            "bot_token": bot_token,
             "bot_id": oauth_data.get("bot_user_id"),
             "app_id": oauth_data.get("app_id"),
             "channel_id": oauth_data.get("incoming_webhook", {}).get("channel_id"),

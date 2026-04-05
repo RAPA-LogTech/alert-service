@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import logging
 from datetime import datetime
+from urllib.parse import urlparse
 
 from ..core.slack_client import get_slack_installation_config, get_slack_oauth_config
 
@@ -20,6 +21,47 @@ async def get_slack_status() -> dict:
     """Slack 연동 상태 조회"""
     installation_config = get_slack_installation_config() or {}
     oauth_config = get_slack_oauth_config() or {}
+
+    team_domain = installation_config.get("team_domain")
+    team_image = installation_config.get("team_image")
+    bot_token = installation_config.get("bot_token")
+    team_id = installation_config.get("team_id")
+
+    # 과거 설치 데이터에 team_domain이 비어 있는 경우 team.info로 보강
+    if (not team_domain or not team_image) and bot_token:
+        try:
+            import requests
+
+            # team:read 없이도 auth.test URL에서 workspace 도메인을 추출할 수 있음
+            if not team_domain:
+                auth_resp = requests.post(
+                    "https://slack.com/api/auth.test",
+                    headers={"Authorization": f"Bearer {bot_token}"},
+                    timeout=10,
+                )
+                auth_resp.raise_for_status()
+                auth_payload = auth_resp.json()
+                if auth_payload.get("ok") and auth_payload.get("url"):
+                    host = urlparse(auth_payload["url"]).hostname or ""
+                    if host.endswith(".slack.com"):
+                        team_domain = host.removesuffix(".slack.com")
+
+            params = {"team": team_id} if team_id else None
+            response = requests.get(
+                "https://slack.com/api/team.info",
+                params=params,
+                headers={"Authorization": f"Bearer {bot_token}"},
+                timeout=10,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if payload.get("ok"):
+                team = payload.get("team") or {}
+                icon = team.get("icon") or {}
+                team_domain = team_domain or team.get("domain")
+                team_image = team_image or team.get("image_230") or icon.get("image_132") or icon.get("image_102")
+        except Exception as exc:
+            logger.warning("Slack team.info fallback failed: %s", exc)
     
     is_connected = bool(
         installation_config.get("channel_id")
@@ -31,6 +73,8 @@ async def get_slack_status() -> dict:
         "isConnected": is_connected,
         "teamId": installation_config.get("team_id"),
         "teamName": installation_config.get("team_name"),
+        "teamDomain": team_domain,
+        "teamImage": team_image,
         "channelId": installation_config.get("channel_id"),
         "channelName": installation_config.get("channel_name"),
         "installedAt": installation_config.get("updated_at") or installation_config.get("installed_at"),
