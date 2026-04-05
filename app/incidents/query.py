@@ -3,11 +3,11 @@ from fastapi import APIRouter, Query
 from ..models.incident import IncidentListResponse
 from ..services.incident_service import IncidentService
 
-router = APIRouter(prefix="/v1/incidents", tags=["incidents"])
+router = APIRouter(tags=["incidents"])
 service = IncidentService()
 
 
-@router.get("", response_model=IncidentListResponse)
+@router.get("/", response_model=IncidentListResponse)
 def list_incidents(
     status: str = Query(pattern="^(ongoing|analyzed|resolved)$"),
     limit: int = Query(default=50, ge=1, le=200),

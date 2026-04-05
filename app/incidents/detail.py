@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from ..models.incident import IncidentDetailResponse
 from ..services.incident_service import IncidentService
 
-router = APIRouter(prefix="/v1/incidents", tags=["incidents"])
+router = APIRouter(tags=["incidents"])
 service = IncidentService()
 
 

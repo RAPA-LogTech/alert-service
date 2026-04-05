@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     slack_client_secret: str | None = None
     slack_signing_secret: str | None = None
     slack_bot_token: str | None = None
+    slack_bot_scopes: str | None = None
+    slack_oauth_config_secret_arn: str | None = None
+    slack_installation_secret_arn: str | None = None
 
     allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
