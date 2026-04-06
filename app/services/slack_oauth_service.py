@@ -193,6 +193,23 @@ class SlackOAuthService:
         success = save_slack_installation_config(installation)
         if success:
             logger.info(f"Installation info saved for team {installation['team_id']}")
+            # 연동된 채널에 봇 자동 참여 (봇 토큰으로 chat.update 등 API 사용 위해 필수)
+            channel_id = installation.get("channel_id")
+            if bot_token and channel_id:
+                try:
+                    response = requests.post(
+                        "https://slack.com/api/conversations.join",
+                        json={"channel": channel_id},
+                        headers={"Authorization": f"Bearer {bot_token}"},
+                        timeout=10,
+                    )
+                    result = response.json()
+                    if result.get("ok"):
+                        logger.info(f"Bot joined channel {channel_id}")
+                    else:
+                        logger.warning(f"Bot failed to join channel {channel_id}: {result.get('error')}")
+                except Exception as exc:
+                    logger.warning(f"conversations.join failed: {exc}")
         else:
             print("Failed to save installation info")
         return success
