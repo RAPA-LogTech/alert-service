@@ -9,6 +9,13 @@ router = APIRouter(tags=["health"])
 
 @router.get("/health")
 def health() -> dict:
+    """Lightweight health check for k8s probes"""
+    return {"status": "ok"}
+
+
+@router.get("/health/ready")
+def health_ready() -> dict:
+    """Readiness check with resource info"""
     settings = get_settings()
     return {
         "status": "ok",

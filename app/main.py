@@ -16,10 +16,6 @@ router = APIRouter()
 async def root():
     return {"status": "ok"}
 
-@router.get("/health")
-async def health():
-    return {"status": "ok"}
-
 
 def create_app() -> FastAPI:
     settings = get_settings()
