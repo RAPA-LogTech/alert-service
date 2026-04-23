@@ -1,6 +1,7 @@
+import logging
+
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
-import logging
 
 from ..core.slack_client import get_slack_installation_config, save_slack_installation_config
 
@@ -15,7 +16,7 @@ class AlertSettings(BaseModel):
     min_severity: str = Field(default="medium")
     quiet_hours_enabled: bool = False
     quiet_hours_start: str = Field(default="02:00")  # HH:MM
-    quiet_hours_end: str = Field(default="07:00")    # HH:MM
+    quiet_hours_end: str = Field(default="07:00")  # HH:MM
     quiet_hours_critical_only: bool = True
     include_service_info: bool = True
     include_trace_link: bool = True
@@ -46,12 +47,16 @@ async def update_alert_settings(payload: AlertSettings) -> dict:
 
     if payload.min_severity not in SEVERITY_LEVELS:
         from fastapi import HTTPException
-        raise HTTPException(status_code=422, detail=f"min_severity must be one of {SEVERITY_LEVELS}")
+
+        raise HTTPException(
+            status_code=422, detail=f"min_severity must be one of {SEVERITY_LEVELS}"
+        )
 
     installation["alert_settings"] = payload.model_dump()
 
     if not save_slack_installation_config(installation):
         from fastapi import HTTPException
+
         raise HTTPException(status_code=500, detail="알람 설정 저장에 실패했습니다.")
 
     logger.info("Alert settings updated")

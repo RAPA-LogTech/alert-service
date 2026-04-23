@@ -1,8 +1,8 @@
 from functools import lru_cache
 
 import boto3
-from botocore.client import BaseClient
 from boto3.resources.base import ServiceResource
+from botocore.client import BaseClient
 
 from .config import get_settings
 

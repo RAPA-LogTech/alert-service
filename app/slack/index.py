@@ -1,12 +1,12 @@
 from fastapi import APIRouter
 
-from .oauth import router as oauth_router
+from .alert_settings import router as alert_settings_router
+from .channels import router as channels_router
 from .events import router as events_router
 from .info import router as info_router
-from .channels import router as channels_router
-from .test import router as test_router
+from .oauth import router as oauth_router
 from .status import router as status_router
-from .alert_settings import router as alert_settings_router
+from .test import router as test_router
 
 router = APIRouter(prefix="/v1/slack")
 
@@ -17,4 +17,3 @@ router.include_router(channels_router, prefix="")
 router.include_router(test_router, prefix="")
 router.include_router(status_router, prefix="")
 router.include_router(alert_settings_router, prefix="")
-

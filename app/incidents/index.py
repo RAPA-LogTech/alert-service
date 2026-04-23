@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
-from .query import router as query_router
 from .analyze import router as analyze_router
 from .detail import router as detail_router
+from .query import router as query_router
 
 router = APIRouter(prefix="/v1/incidents")
 

@@ -12,7 +12,9 @@ class IncidentService:
     def __init__(self, repository: IncidentRepository | None = None) -> None:
         self._repository = repository or IncidentRepository()
 
-    def list_incidents(self, *, status: str, limit: int, cursor: str | None) -> IncidentListResponse:
+    def list_incidents(
+        self, *, status: str, limit: int, cursor: str | None
+    ) -> IncidentListResponse:
         exclusive_start_key = decode_cursor(cursor)
         items, last_evaluated_key = self._repository.query_by_status(
             status=status,

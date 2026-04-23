@@ -1,5 +1,5 @@
-from datetime import datetime
 import logging
+from datetime import datetime
 from urllib.parse import urlparse
 
 import requests
@@ -58,12 +58,14 @@ class SlackOAuthService:
             icon = team.get("icon") or {}
             return {
                 "team_domain": team.get("domain") or team_domain,
-                "team_image": team.get("image_230") or icon.get("image_132") or icon.get("image_102"),
+                "team_image": team.get("image_230")
+                or icon.get("image_132")
+                or icon.get("image_102"),
             }
         except Exception as exc:
             logger.warning("team.info request failed: %s", exc)
             return {"team_domain": team_domain}
-    
+
     def get_authorization_url(self, redirect_uri: str) -> str:
         """Slack 인증 URL 생성"""
         oauth_config = get_slack_oauth_config() or {}
@@ -72,14 +74,14 @@ class SlackOAuthService:
 
         if not client_id:
             raise ValueError("Slack Client ID not configured")
-        
+
         return (
             f"https://slack.com/oauth/v2/authorize?"
             f"client_id={client_id}&"
             f"scope={scopes}&"
             f"redirect_uri={redirect_uri}"
         )
-    
+
     def exchange_code_for_token(self, code: str) -> dict | None:
         """인증 코드를 토큰으로 교환"""
         try:
@@ -101,17 +103,17 @@ class SlackOAuthService:
                 timeout=10,
             )
             response.raise_for_status()
-            
+
             data = response.json()
             if not data.get("ok"):
                 print(f"Slack OAuth error: {data.get('error')}")
                 return None
-            
+
             return data
         except Exception as e:
             print(f"Failed to exchange code for token: {e}")
             return None
-    
+
     def save_oauth_config(self, oauth_data: dict) -> bool:
         """OAuth 설정을 Secrets Manager에 저장"""
         current_config = get_slack_oauth_config() or {}
@@ -147,7 +149,7 @@ class SlackOAuthService:
         else:
             print("Failed to save OAuth config")
         return success
-    
+
     def save_installation(self, oauth_data: dict) -> bool:
         """Slack 설치 정보 저장"""
         current_installation = get_slack_installation_config() or {}
@@ -157,7 +159,11 @@ class SlackOAuthService:
 
         # oauth.v2.access 응답에 domain/icon이 누락되는 경우가 있어 team.info로 보강한다.
         team_meta = self._fetch_team_metadata(bot_token, team_id)
-        team_domain = team_info.get("domain") or team_meta.get("team_domain") or current_installation.get("team_domain")
+        team_domain = (
+            team_info.get("domain")
+            or team_meta.get("team_domain")
+            or current_installation.get("team_domain")
+        )
         team_image = (
             team_info.get("image_230")
             or team_info.get("icon", {}).get("image_132")
@@ -182,7 +188,9 @@ class SlackOAuthService:
                     "id": oauth_data.get("incoming_webhook", {}).get("channel_id"),
                     "name": oauth_data.get("incoming_webhook", {}).get("channel"),
                 }
-            ] if oauth_data.get("incoming_webhook", {}).get("channel_id") else [],
+            ]
+            if oauth_data.get("incoming_webhook", {}).get("channel_id")
+            else [],
             "webhook_url": oauth_data.get("incoming_webhook", {}).get("url"),
             "installed_by": oauth_data.get("authed_user", {}).get("id"),
             "installed_at": datetime.utcnow().isoformat(),
@@ -207,7 +215,9 @@ class SlackOAuthService:
                     if result.get("ok"):
                         logger.info(f"Bot joined channel {channel_id}")
                     else:
-                        logger.warning(f"Bot failed to join channel {channel_id}: {result.get('error')}")
+                        logger.warning(
+                            f"Bot failed to join channel {channel_id}: {result.get('error')}"
+                        )
                 except Exception as exc:
                     logger.warning(f"conversations.join failed: {exc}")
         else:

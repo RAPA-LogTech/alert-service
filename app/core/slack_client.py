@@ -33,7 +33,9 @@ def _save_secret_json(secret_arn: str | None, payload: dict) -> bool:
 
     try:
         client = get_secrets_manager_client()
-        client.put_secret_value(SecretId=secret_arn, SecretString=json.dumps(payload, ensure_ascii=False))
+        client.put_secret_value(
+            SecretId=secret_arn, SecretString=json.dumps(payload, ensure_ascii=False)
+        )
         return True
     except Exception as e:
         print(f"Failed to store secret {secret_arn}: {e}")

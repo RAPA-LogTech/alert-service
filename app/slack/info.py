@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
-from ..models.slack import SlackIntegrationResponse, SlackIntegrationStatus
 from ..core.slack_client import get_slack_installation_config, get_slack_oauth_config
+from ..models.slack import SlackIntegrationResponse, SlackIntegrationStatus
 
 router = APIRouter(tags=["slack"])
 
@@ -16,7 +16,7 @@ def get_slack_integration_info() -> SlackIntegrationResponse:
         installation_config.get("channel_id")
         and installation_config.get("status") != "disconnected"
     )
-    
+
     status = SlackIntegrationStatus(
         is_connected=is_connected,
         team_id=installation_config.get("team_id"),
@@ -25,14 +25,16 @@ def get_slack_integration_info() -> SlackIntegrationResponse:
         installed_channels=installation_config.get("installed_channels"),
         scopes=oauth_config.get("scopes") if oauth_config else None,
     )
-    
+
     message = (
-        "Slack이 연동되었습니다." if is_connected 
+        "Slack이 연동되었습니다."
+        if is_connected
         else "Slack이 아직 연동되지 않았습니다. /oauth/connect로 연동하세요."
     )
-    
+
     return SlackIntegrationResponse(
         status=status,
-        last_updated=installation_config.get("updated_at") or installation_config.get("installed_at"),
+        last_updated=installation_config.get("updated_at")
+        or installation_config.get("installed_at"),
         message=message,
     )

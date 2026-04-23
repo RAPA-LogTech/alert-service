@@ -1,16 +1,17 @@
 import logging
 
-from fastapi import FastAPI, Request, APIRouter
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api.health import router as health_router
+from .core.config import get_settings
 from .incidents.index import router as incidents_router
 from .slack.index import router as slack_router
-from .core.config import get_settings
 
 logger = logging.getLogger("uvicorn.error")
 
 router = APIRouter()
+
 
 @router.get("/")
 async def root():

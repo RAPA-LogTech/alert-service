@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+import json
 import logging
 import os
-import json
+
 import boto3
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["incidents"])
@@ -18,8 +19,8 @@ class AnalyzeRequest(BaseModel):
 @router.post("/analyze")
 async def request_analysis(payload: AnalyzeRequest) -> dict:
     """대시보드에서 분석 요청 트리거"""
-    from ..repositories.incident_repository import IncidentRepository, sanitize_ddb_item
     from ..core.config import get_settings
+    from ..repositories.incident_repository import IncidentRepository, sanitize_ddb_item
 
     if not LAMBDA_AGENT_ARN:
         raise HTTPException(status_code=500, detail="Lambda Agent ARN이 설정되지 않았습니다.")
@@ -55,14 +56,16 @@ async def request_analysis(payload: AnalyzeRequest) -> dict:
         client.invoke(
             FunctionName=LAMBDA_AGENT_ARN,
             InvocationType="Event",  # 비동기
-            Payload=json.dumps({
-                "_action": "run_analysis",
-                "alert_name": alert_name,
-                "slack_ts": slack_ts,
-                "slack_channel": slack_channel,
-                "severity": severity,
-                "question": question,
-            }).encode(),
+            Payload=json.dumps(
+                {
+                    "_action": "run_analysis",
+                    "alert_name": alert_name,
+                    "slack_ts": slack_ts,
+                    "slack_channel": slack_channel,
+                    "severity": severity,
+                    "question": question,
+                }
+            ).encode(),
         )
     except Exception as e:
         logger.error(f"Lambda invoke failed: {e}")
